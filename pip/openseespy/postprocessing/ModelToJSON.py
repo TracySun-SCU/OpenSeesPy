@@ -4,11 +4,11 @@ def WriteModelToJSON(filename,indent=-1,outformat='.6g'):
     
     modelData = {'ndm': ops.getNDM()[0], 'bounds': ops.nodeBounds()}
     NDF = ops.getNDF()[0]
-    
+
     nodes = ops.getNodeTags()
     Nnodes = len(nodes)
     fixedNodes = ops.getFixedNodes()
-    
+
     nodeData = {}
     for nd in nodes:
         nodeData[nd] = {'crds': [float(f"{item:{outformat}}") for item in ops.nodeCoord(nd)]}
@@ -18,27 +18,20 @@ def WriteModelToJSON(filename,indent=-1,outformat='.6g'):
             for dof in fixedDOFs:
                 fixities[dof-1] = -1;
             nodeData[nd]['fix'] = fixities
-                
+
     modelData['nodes'] = nodeData
-        
+
     eles = ops.getEleTags()
     Neles = len(eles)
 
-    eleTypes = {}
-    for ele in eles:
-        eleTypes[ops.getEleClassTags(ele)[0]] = ops.eleType(ele)
+    eleTypes = {ops.getEleClassTags(ele)[0]: ops.eleType(ele) for ele in eles}
     modelData['elementTypes'] = eleTypes
-    
+
     modelData['sectionTypes'] = {1: 'rect'}
     modelData['sections'] = {}
-    
-    # A unique burner tag
-    #
-    paramTag = 1
+
     paramTags = ops.getParamTags()
-    if len(paramTags) > 0:
-        paramTag = max(paramTags) + 1
-    
+    paramTag = max(paramTags) + 1 if len(paramTags) > 0 else 1
     for ele in eles:
         if ops.eleType(ele) in ['ElasticBeam3d']:
             ops.parameter(paramTag,'element',ele,'A')
@@ -55,11 +48,11 @@ def WriteModelToJSON(filename,indent=-1,outformat='.6g'):
             h = float(f"{h:{outformat}}")
             b = float(f"{b:{outformat}}")
             modelData['sections'][ele] = {'type': 1, 'data': [b,h]}
-            
+
     elementData = {}
     for ele in eles:
         elementData[ele] = {'nodes': ops.eleNodes(ele), 'type': ops.getEleClassTags(ele)[0]}
-        
+
         sectionData = {}
         eleType = ops.eleType(ele)
         if eleType in ['ElasticBeam2d','ElasticBeam3d']:
@@ -81,9 +74,8 @@ def WriteModelToJSON(filename,indent=-1,outformat='.6g'):
     Npatterns = len(patterns)
     for pattern in patterns:
 
-        patternData[pattern] = {}
+        patternData[pattern] = {'nodalLoad': {}}
 
-        patternData[pattern]['nodalLoad'] = {}
         nodalLoads = ops.getNodeLoadTags(pattern)
         nodalLoadData = ops.getNodeLoadData(pattern)
         loc = 0
@@ -103,10 +95,9 @@ def WriteModelToJSON(filename,indent=-1,outformat='.6g'):
                 patternData[pattern]['eleLoad'][ele] = [float(f"{item:{outformat}}") for item in [wx,wy,wz]]
             loc += Ndata
     modelData['patterns'] = patternData
-    
-    outjson = open(filename,'w')
-    if indent < 0:
-        outjson.write(json.dumps(modelData,separators=(',', ':')) + '\n')
-    else:
-        outjson.write(json.dumps(modelData,indent=indent,separators=(',', ':')) + '\n')
-    outjson.close()
+
+    with open(filename,'w') as outjson:
+        if indent < 0:
+            outjson.write(json.dumps(modelData,separators=(',', ':')) + '\n')
+        else:
+            outjson.write(json.dumps(modelData,indent=indent,separators=(',', ':')) + '\n')
