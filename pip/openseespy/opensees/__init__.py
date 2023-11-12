@@ -32,4 +32,4 @@ elif sys.platform.startswith('darwin'):
 
 else:
 
-    raise RuntimeError(sys.platform+' is not supported yet')
+    raise RuntimeError(f'{sys.platform} is not supported yet')
